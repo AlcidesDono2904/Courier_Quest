@@ -3,7 +3,7 @@ import json
 import os
 import pickle
 from sys import path
-path.append('..\\Courier_Quest-1')
+path.append('..\\Courier_Quest')
 
 from datetime import datetime, timedelta
 from src.config.config import URL, CACHE_DIR, DATA_DIR, SAVES_DIR

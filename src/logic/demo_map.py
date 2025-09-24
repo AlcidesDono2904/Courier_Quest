@@ -2,8 +2,6 @@ import pygame
 import sys
 import json
 import os
-
-# Añadir el directorio src al path para importar módulos
 sys.path.append('src')
 
 from logic.map import Map

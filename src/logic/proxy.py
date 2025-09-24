@@ -4,11 +4,11 @@ import json
 import os 
 from datetime import datetime, timedelta
 from sys import path
-path.append('..\\Courier_Quest-1')
+path.append('..\\Courier_Quest')
 import src.config.config as config
-from weather import Weather
-from map import Map
-from order import Order
+from src.logic.weather import Weather
+from src.logic.map import Map
+from src.logic.order import Order
 
 # Singleton proxy class to manage API requests
 class Proxy:
