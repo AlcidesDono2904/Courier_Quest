@@ -10,3 +10,6 @@ WEATHER_MULTIPLIERS = {
 }
 
 URL = "https://tigerds-api.kindflower-ccaf48b6.eastus.azurecontainerapps.io/"
+CACHE_DIR = "api_cache"
+DATA_DIR = "data"
+SAVES_DIR = "saves"
