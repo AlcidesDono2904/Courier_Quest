@@ -10,7 +10,7 @@ class Player:
         self.x = x #poscion del jugador 
         self.y = y #poscion del jugador
         self.income_goal = income_goal
-        
+         
         self.max_weight = 30
         self.inventory = Inventory(peso_maximo=self.max_weight)
         self.stamina = 100
@@ -86,11 +86,11 @@ class Player:
             self.is_exhausted = False
             print("El jugador se ha recuperado y puede moverse de nuevo.")
     
-    def move(self, dx, dy, weather_condition, surface_weight_tile):
+    def move(self, new_x, new_y, weather_condition, surface_weight_tile):
         
         if not self.is_exhausted:
-            self.x += dx
-            self.y += dy
+            self.x = new_x
+            self.y = new_y
             self.consume_stamina(weather_condition)
         else:
             print("El jugador está agotado. Debe descansar para recuperarse.")
