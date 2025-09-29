@@ -144,3 +144,61 @@ class Inventory:
                 node = node.next
 
         print("Inventory sorted.")
+
+    def sort_by_delivery_time(self):
+        # Si la lista está vacía o tiene un solo elemento, no hay nada que ordenar.
+        if not self.first or not self.first.next:
+            print("El inventario ya está ordenado o está vacío.")
+            return
+
+        # Guarda el ID del pedido actual para restaurar el puntero después de ordenar.
+        current_id = self.current_order.order.id if self.current_order else None
+
+        sorted_head = None
+        current = self.first
+
+        # Se utiliza el algoritmo de ordenamiento por inserción para la lista enlazada.
+        while current:
+            next_to_process = current.next
+            current.prev = None
+            current.next = None
+
+            # Inserta al principio si sorted_head es None o la hora de entrega del actual es menor.
+            if (sorted_head is None or
+                    current.order.release_time < sorted_head.order.release_time):
+                current.next = sorted_head
+                if sorted_head:
+                    sorted_head.prev = current
+                sorted_head = current
+            else:
+                # Busca la posición correcta para insertar el nodo actual.
+                seeker = sorted_head
+                # Avanza mientras el siguiente nodo tenga una hora menor o igual al actual.
+                while (seeker.next and seeker.next.order.release_time <= current.order.release_time):
+                    seeker = seeker.next
+
+                current.next = seeker.next
+                if seeker.next:
+                    seeker.next.prev = current
+                seeker.next = current
+                current.prev = seeker
+
+            current = next_to_process
+
+        # Actualiza los punteros 'first' y 'last' de la lista.
+        self.first = sorted_head
+        last_node = self.first
+        while last_node.next:
+            last_node = last_node.next
+        self.last = last_node
+
+        # Restaura el puntero 'current_order' a donde estaba antes de ordenar.
+        if current_id is not None:
+            node = self.first
+            while node:
+                if node.order.id == current_id:
+                    self.current_order = node
+                    break
+                node = node.next
+
+        print("Inventario ordenado por hora de entrega.")
