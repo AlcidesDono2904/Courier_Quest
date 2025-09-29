@@ -1,4 +1,5 @@
 import pygame
+from .logic.GameLoop import GameLoop
 from src.logic.player import Player
 from src.logic.proxy import Proxy
 from src.logic.weather import Weather
@@ -38,7 +39,7 @@ class Game:
                     action = self.main_menu.handle_event(event)
                     if action == "start_game":
                         print("Iniciando nuevo juego...")
-                       
+                        self.state = "GAMEPLAY"
                     elif action == "load_game":
                         print("Cargando partida...")
                     elif action == "high_scores":
@@ -53,9 +54,15 @@ class Game:
             
                 self.main_menu.draw()
             elif self.state == "GAMEPLAY":
-                
-                self.screen.fill((0, 50, 0))
-                pygame.display.flip()
+                try:
+                    game_loop = GameLoop()
+                    game_loop.run()
+                except Exception as e:
+                    print(f"Error en el demo: {e}")
+                    import traceback
+                    traceback.print_exc()
+                finally:
+                    pygame.quit()              
                 
             self.clock.tick(60)
             
