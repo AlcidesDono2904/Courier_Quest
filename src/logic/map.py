@@ -39,6 +39,7 @@ class Map:
         self.tiles = map_data.get("tiles", [])
         self.legend = map_data.get("legend", {})
         self.goal = map_data.get("goal", 0)
+        self.max_time = map_data.get("max_time", 600) 
         
     def load_from_file(self, filename):
         """

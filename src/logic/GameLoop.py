@@ -2,6 +2,7 @@ import pygame
 import sys
 import json
 import os
+import queue
 sys.path.append('src')
 
 from logic.map import Map
@@ -36,6 +37,8 @@ class GameLoop:
             spawn_y,
             income_goal=self.game_map.goal,
         )
+        # LIFO stack of last movement directions (dx, dy) in pixels
+        self.player_movements = queue.LifoQueue()
 
         # Smooth movement variables
         self.player_is_moving = False
@@ -47,6 +50,11 @@ class GameLoop:
         # Movement timing control
         self.last_movement_time = 0
         self.movement_delay = 200  # milliseconds between movements (200ms = 5 moves/second)
+
+        self.start_time = pygame.time.get_ticks()
+        # max_time is provided in SECONDS by the map; convert seconds -> milliseconds
+        self.max_time_ms = self.game_map.max_time * 1000
+        self.game_over = False
 
         # Colores y fuentes
         self.background_color = (50, 50, 50)
@@ -65,26 +73,10 @@ class GameLoop:
         
     def load_map(self):
         """Carga el mapa usando el proxy y luego lo pre-renderiza."""
-        try:
-            # 1. Intentamos obtener el mapa desde el Proxy
-            print("Cargando mapa desde el proxy...")
-            proxy = get_proxy()
-            self.game_map = proxy.get_map()
-            
-            # 2. Verificamos si la carga fue exitosa
-            if self.game_map and self.game_map.tiles:
-                print(f"Mapa cargado exitosamente: {self.game_map.width}x{self.game_map.height}")
-            else:
-                # Si el proxy no devuelve un mapa válido, creamos uno de prueba
-                print("Proxy no devolvió un mapa válido, creando mapa de prueba.")
-                self.create_test_map()
-                
-        except Exception as e:
-            # Si hay cualquier error con el proxy, creamos un mapa de prueba
-            print(f"Error al cargar mapa desde el proxy: {e}")
-            self.create_test_map()
+
+        proxy = get_proxy()
+        self.game_map = proxy.get_map()
         
-        # 3. MUY IMPORTANTE: Pre-renderizamos el mapa DESPUÉS de que se haya cargado
         if self.game_map:
             self._render_map_surface()
 
@@ -103,37 +95,6 @@ class GameLoop:
                 pygame.draw.rect(self.map_surface, color, rect)
                 pygame.draw.rect(self.map_surface, (0, 0, 0), rect, 1) # Borde
     
-    def create_test_map(self):
-        """Crea un mapa de prueba si falla la carga."""
-        test_map_data = {
-            "version": "1.0",
-            "width": 20,
-            "height": 15,
-            "tiles": [],
-            "legend": {
-                "C": {"name": "calle", "surface_weight": 1.00},
-                "B": {"name": "edificio", "blocked": True},
-                "P": {"name": "parque", "surface_weight": 0.95}
-            },
-            "goal": 3000
-        }
-        
-        # Generar mapa procedural simple
-        import random
-        for y in range(15):
-            row = []
-            for x in range(20):
-                # Crear patrones más interesantes
-                if random.random() < 0.15:
-                    row.append("B")  # Edificio
-                elif random.random() < 0.1:
-                    row.append("P")  # Parque
-                else:
-                    row.append("C")  # Calle
-            test_map_data["tiles"].append(row)
-        
-        self.game_map = Map(test_map_data)
-        print("Usando mapa de prueba generado")
     
     def handle_events(self):
         """Maneja eventos de pygame."""
@@ -192,16 +153,27 @@ class GameLoop:
             move_speed = 32
             current_x, current_y = self.player.x, self.player.y
             new_x, new_y = current_x, current_y
+            dx, dy = 0, 0
 
             # Check for movement keys being held down
-            if keys[pygame.K_a]:  # Izquierda
-                new_x -= move_speed
-            elif keys[pygame.K_d]:  # Derecha
-                new_x += move_speed
-            elif keys[pygame.K_w]:  # Arriba
-                new_y -= move_speed
-            elif keys[pygame.K_s]:  # Abajo
-                new_y += move_speed
+            using_z = False
+            if keys[pygame.K_z] and not self.player_movements.empty(): 
+                # Revert last movement direction from LIFO stack (peek and invert)
+                last_dx, last_dy = self.player_movements.queue[-1]
+                dx, dy = -last_dx, -last_dy
+                using_z = True
+            else:
+                if keys[pygame.K_a]:  # Izquierda
+                    dx = -move_speed
+                elif keys[pygame.K_d]:  # Derecha
+                    dx = move_speed
+                elif keys[pygame.K_w]:  # Arriba
+                    dy = -move_speed
+                elif keys[pygame.K_s]:  # Abajo
+                    dy = move_speed
+
+            new_x += dx
+            new_y += dy
             
             # If movement was requested
             if new_x != current_x or new_y != current_y:
@@ -215,7 +187,26 @@ class GameLoop:
                         self.player_target_pos = (new_x, new_y)
                         self.movement_progress = 0.0
                         self.last_movement_time = current_time
-        
+                        # If using Z, now that movement is valid, pop the reverted direction from history
+                        if using_z:
+                            try:
+                                self.player_movements.get_nowait()
+                            except Exception:
+                                pass
+                        # Record direction only for manual WASD moves (not for Z repeats)
+                        if not using_z and (dx != 0 or dy != 0):
+                            self.player_movements.put((dx, dy))
+                            # Optional cap to 50 entries
+                            try:
+                                while self.player_movements.qsize() > 50:
+                                    # Drop the oldest bottom entry
+                                    if hasattr(self.player_movements, 'queue') and self.player_movements.queue:
+                                        # remove first element
+                                        self.player_movements.queue.pop(0)
+                                    else:
+                                        break
+                            except Exception:
+                                pass
         # Update smooth movement animation
         if self.player_is_moving:
             self.movement_progress += self.movement_speed
@@ -227,7 +218,8 @@ class GameLoop:
                 # Update actual player position
                 target_x, target_y = self.player_target_pos
                 self.player.move(target_x, target_y, weather_condition="clear", surface_weight_tile=1.0)
-
+        else:
+            self.player.recover_stamina()
     def draw_map(self):
         """Dibuja el mapa pre-renderizado en pantalla."""
         if hasattr(self, 'map_surface'):
@@ -266,7 +258,7 @@ class GameLoop:
             return
         
         # Panel semi-transparente
-        info_surface = pygame.Surface((300, 250))
+        info_surface = pygame.Surface((300, 270))
         info_surface.set_alpha(200)
         info_surface.fill((30, 30, 30))
         self.screen.blit(info_surface, (10, 10))
@@ -281,14 +273,22 @@ class GameLoop:
         
         # Información del mapa
         if self.game_map:
+            # Compute remaining time
+            remaining_ms = max(0, self.max_time_ms - (pygame.time.get_ticks() - self.start_time))
+            minutes = remaining_ms // 60000
+            seconds = (remaining_ms % 60000) // 1000
+            time_str = f"Tiempo restante: {minutes:02d}:{seconds:02d}"
+
             info_lines = [
                 f"Dimensiones: {self.game_map.width}x{self.game_map.height}",
                 f"Meta: ${self.game_map.goal}",
-                f"Cámara: ({self.camera_x}, {self.camera_y})",
+                time_str,
+                f"Cámara: ({int(self.camera_x)}, {int(self.camera_y)})",
                 "",
                 "Controles:",
                 "Flechas - Cámara",
                 "WASD - Jugador",
+                "Z - Revertir último movimiento",
                 "G - Toggle grid",
                 "I - Toggle info",
                 "R - Recargar mapa",
@@ -418,6 +418,7 @@ class GameLoop:
         print("Controles:")
         print("  Flechas - Mover cámara")
         print("  WASD - Mover jugador")
+        print("  Z - Repetir último movimiento")
         print("  G - Toggle grid")
         print("  I - Toggle info panel")
         print("  R - Recargar mapa")
@@ -428,19 +429,36 @@ class GameLoop:
         while running:
             # Eventos
             running = self.handle_events()
-            
-            # Actualizaciones
-            self.update_camera()
-            self.update_player()
+            # Timer check
+            if not self.game_over:
+                current_time = pygame.time.get_ticks()
+                if (current_time - self.start_time) >= self.max_time_ms:
+                    self.game_over = True
+
+            # Actualizaciones (only when game not over)
+            if not self.game_over:
+                self.update_camera()
+                self.update_player()
             
             # Dibujo
-            self.screen.fill(self.background_color)
+            self.screen.fill(self.background_color)         
             
             self.draw_map()
             self.draw_player()
             self.draw_info_panel()
             self.draw_minimap()
             self.draw_tile_info()
+
+            # If game over, draw overlay
+            if self.game_over:
+                overlay = pygame.Surface((self.screen_width, self.screen_height))
+                overlay.set_alpha(200)
+                overlay.fill((0, 0, 0))
+                self.screen.blit(overlay, (0, 0))
+                go_font = pygame.font.Font(None, 72)
+                go_text = go_font.render("GAME OVER", True, (255, 0, 0))
+                txt_rect = go_text.get_rect(center=(self.screen_width // 2, self.screen_height // 2))
+                self.screen.blit(go_text, txt_rect)
             
             # FPS
             fps_text = self.font.render(f"FPS: {int(self.clock.get_fps())}", 
