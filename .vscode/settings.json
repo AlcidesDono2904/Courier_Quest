@@ -1,0 +1,10 @@
+{
+    "animations.CursorAnimation": true,
+    "animations.CursorAnimationOptions": {
+        "TrailLength": 8
+    },
+    "animations.Command-Palette": "Fade",
+    "animations.Durations": {
+        "Smooth-Mode": 200
+    }
+}
