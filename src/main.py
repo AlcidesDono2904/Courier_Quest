@@ -2,6 +2,7 @@
 Courier Quest - Primer Proyecto Programado
 EIF-207 Estructuras de Datos
 II Ciclo 2025
+main.py
 """
 
 import pygame

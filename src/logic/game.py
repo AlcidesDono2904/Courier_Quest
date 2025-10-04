@@ -229,12 +229,17 @@ class Game:
 
         self.order_manager.update_available(self.elapsed_time)
 
+        # FIX: Convertir ambos datetime a naive para comparar
         current_game_time = self.get_current_game_datetime()
         if self.player.inventory.first:
             node = self.player.inventory.first
             orders_to_expire = []
             while node:
                 deadline = datetime.fromisoformat(node.order.deadline)
+                # Convertir deadline a naive si tiene timezone
+                if deadline.tzinfo is not None:
+                    deadline = deadline.replace(tzinfo=None)
+                
                 if current_game_time > deadline:
                     orders_to_expire.append(node.order)
                 node = node.next
@@ -362,7 +367,7 @@ class Game:
         
         print(f"Cálculo de puntaje: ${score_base} (ingresos) + ${bonus} (bonus) - ${penalties} (penalizaciones) = {int(final_score)}")
         
-        return int(max(0, final_score)) # Evitar puntajes negativos
+        return int(max(0, final_score))
 
     def end_game(self, victory):
         """Finaliza el juego y calcula puntaje."""

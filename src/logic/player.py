@@ -103,6 +103,11 @@ class Player:
 
         order = self.inventory.current_order.order
         deadline = datetime.fromisoformat(order.deadline)
+        
+        # FIX: Convertir deadline a naive si tiene timezone
+        if deadline.tzinfo is not None:
+            deadline = deadline.replace(tzinfo=None)
+        
         time_diff = (deadline - current_time).total_seconds()
 
         rep_change = 0

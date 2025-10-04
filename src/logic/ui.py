@@ -124,7 +124,6 @@ class UIManager:
             flash.fill((255, 255, 255, 150))
             surface.blit(flash, (0, 0))
         
-    # LÍNEA CORREGIDA: Se añade el parámetro 'current_game_time' para que acepte 7 argumentos
     def draw_hud(self, surface, player, game_time, weather, elapsed, current_game_time):
         """Dibuja el HUD principal."""
         panel_rect = pygame.Rect(0, 0, 190, self.screen_height)
@@ -132,7 +131,7 @@ class UIManager:
         
         y = 10
         
-        # HORA DEL JUEGO: Se muestra la hora actual del juego
+        # HORA DEL JUEGO
         time_str = current_game_time.strftime("%H:%M:%S")
         self._draw_text(surface, f"Hora: {time_str}", 10, y, 
                        self.font_medium, self.colors['text'])
@@ -352,4 +351,16 @@ class UIManager:
         title = "¡VICTORIA!" if victory else "DERROTA"
         title_color = self.colors['success'] if victory else self.colors['danger']
         
-        title_surf 
+        title_surf = self.font_large.render(title, True, title_color)
+        title_rect = title_surf.get_rect(center=(self.screen_width // 2, self.screen_height // 2 - 50))
+        surface.blit(title_surf, title_rect)
+        
+        score_text = f"Puntaje Final: {score}"
+        score_surf = self.font_medium.render(score_text, True, self.colors['text'])
+        score_rect = score_surf.get_rect(center=(self.screen_width // 2, self.screen_height // 2 + 20))
+        surface.blit(score_surf, score_rect)
+        
+        instruction = "Presiona ESC para salir"
+        instruction_surf = self.font_small.render(instruction, True, self.colors['text_dim'])
+        instruction_rect = instruction_surf.get_rect(center=(self.screen_width // 2, self.screen_height // 2 + 80))
+        surface.blit(instruction_surf, instruction_rect)
