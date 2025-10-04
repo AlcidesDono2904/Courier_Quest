@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from src.config.config import (
     WEATHER_MULTIPLIERS, REP_BONUS_EARLY, REP_BONUS_ON_TIME,
     REP_PENALTY_SLIGHTLY_LATE, REP_PENALTY_LATE, REP_PENALTY_VERY_LATE,
@@ -96,17 +96,27 @@ class Player:
             print(f"No se puede aceptar: {e}")
             return False
 
+    def _normalize_datetime(self, dt_string):
+        """Convierte un string datetime a UTC de forma segura."""
+        dt = datetime.fromisoformat(dt_string)
+        if dt.tzinfo is None:
+            # Si no tiene timezone, asumimos UTC
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt
+
     def complete_delivery(self, current_time):
         """Completa entrega actual y actualiza reputación/ingresos."""
         if self.inventory.current_order is None:
             return None
 
         order = self.inventory.current_order.order
-        deadline = datetime.fromisoformat(order.deadline)
         
-        # FIX: Convertir deadline a naive si tiene timezone
-        if deadline.tzinfo is not None:
-            deadline = deadline.replace(tzinfo=None)
+        # MEJOR SOLUCIÓN: Normalizar ambos datetime a UTC
+        deadline = self._normalize_datetime(order.deadline)
+        
+        # Asegurar que current_time también tenga timezone
+        if current_time.tzinfo is None:
+            current_time = current_time.replace(tzinfo=timezone.utc)
         
         time_diff = (deadline - current_time).total_seconds()
 

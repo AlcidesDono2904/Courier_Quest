@@ -1,6 +1,6 @@
 import pygame
 import random
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from src.logic.proxy import Proxy
 from src.logic.city import City, OrderManager
 from src.logic.player import Player
@@ -31,7 +31,9 @@ class Game:
         self.ui = UIManager(1200, 800)
 
         self.game_duration = 900
-        self.game_start_datetime = datetime(2025, 9, 1, 12, 0, 0)
+        
+        # MEJOR SOLUCIÓN: Usar UTC para evitar problemas con zona horaria local
+        self.game_start_datetime = datetime(2025, 9, 1, 12, 0, 0, tzinfo=timezone.utc)
         
         self.start_time = pygame.time.get_ticks() / 1000.0
         self.elapsed_time = 0
@@ -111,7 +113,7 @@ class Game:
                     self.player.inventory.sort_inventory(lambda o: o.priority)
                     self.show_message("Ordenado por prioridad")
                 elif event.key == pygame.K_d:
-                    self.player.inventory.sort_inventory(lambda o: datetime.fromisoformat(o.deadline))
+                    self.player.inventory.sort_inventory(lambda o: self._normalize_datetime(o.deadline))
                     self.show_message("Ordenado por deadline")
 
                 if event.key == pygame.K_a:
@@ -136,6 +138,13 @@ class Game:
                     if state:
                         self.restore_state(state)
                         self.show_message("Deshacer último movimiento")
+
+    def _normalize_datetime(self, dt_string):
+        """Convierte un string datetime a un objeto datetime con timezone UTC."""
+        dt = datetime.fromisoformat(dt_string)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt
 
     def accept_order_at_location(self):
         """Acepta un pedido si el jugador está en el punto de recogida."""
@@ -229,16 +238,13 @@ class Game:
 
         self.order_manager.update_available(self.elapsed_time)
 
-        # FIX: Convertir ambos datetime a naive para comparar
+        # MEJOR SOLUCIÓN: Normalizar ambos datetime a UTC
         current_game_time = self.get_current_game_datetime()
         if self.player.inventory.first:
             node = self.player.inventory.first
             orders_to_expire = []
             while node:
-                deadline = datetime.fromisoformat(node.order.deadline)
-                # Convertir deadline a naive si tiene timezone
-                if deadline.tzinfo is not None:
-                    deadline = deadline.replace(tzinfo=None)
+                deadline = self._normalize_datetime(node.order.deadline)
                 
                 if current_game_time > deadline:
                     orders_to_expire.append(node.order)
