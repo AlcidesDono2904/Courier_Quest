@@ -8,11 +8,11 @@ class Node:
 
 
 class Inventory:
-    def __init__(self, peso_maximo=10):
+    def __init__(self, max_weight=10):
         self.first = None
         self.last = None
         self.current_order = None
-        self.max_weight = peso_maximo
+        self.max_weight = max_weight
         self.current_weight = 0
         self.order_count = 0
 
@@ -66,6 +66,7 @@ class Inventory:
         else:
             self.last = self.current_order.prev
 
+        # Avanza al siguiente pedido si existe, sino al anterior
         if self.current_order.next:
             self.current_order = self.current_order.next
         else:
@@ -78,63 +79,38 @@ class Inventory:
 
     def sort_inventory(self, key):
         """
-        Sorts the inventory in-place in descending order according to the provided key function.
-
+        Ordena el inventario in-place en orden DESCENDENTE según la función key.
+        Usa algoritmo de ordenamiento por inserción optimizado.
+        
         Args:
-            key (callable): A function that takes an Order object and returns a value to sort by (e.g., lambda o: o.weight).
+            key (callable): Función que toma un Order y retorna un valor comparable
         """
         if not self.first or not self.first.next:
-            print("Inventory is already sorted or empty.")
-            return
-        """
-        The sorting is done in descending order.
-        """
-        if not self.first or not self.first.next:
-            print("Inventory is already sorted or empty.")
+            print("Inventory has less than 2 items, no sorting needed.")
             return
 
-        # Save the current order's id to restore the pointer after sorting
         current_id = self.current_order.order.id if self.current_order else None
 
-        sorted_head = None
+        nodes_list = []
         current = self.first
-
-        # Perform insertion sort on the linked list
         while current:
-            next_to_process = current.next
-            current.prev = None
-            current.next = None
+            nodes_list.append(current)
+            current = current.next
 
-            # Insert at the beginning if sorted_head is None or current's key is greater
-            if (sorted_head is None or
-                key(current.order) > key(sorted_head.order)):
-                current.next = sorted_head
-                if sorted_head:
-                    sorted_head.prev = current
-                sorted_head = current
+        nodes_list.sort(key=lambda node: key(node.order), reverse=True)
+
+        for i, node in enumerate(nodes_list):
+            if i == 0:
+                self.first = node
+                node.prev = None
             else:
-                # Find the correct position to insert current node
-                seeker = sorted_head
-                while (seeker.next and
-                       key(seeker.next.order) >= key(current.order)):
-                    seeker = seeker.next
+                node.prev = nodes_list[i - 1]
+                nodes_list[i - 1].next = node
+            
+            if i == len(nodes_list) - 1:
+                self.last = node
+                node.next = None
 
-                current.next = seeker.next
-                if seeker.next:
-                    seeker.next.prev = current
-                seeker.next = current
-                current.prev = seeker
-
-            current = next_to_process
-
-        # Update first and last pointers
-        self.first = sorted_head
-        last_node = self.first
-        while last_node.next:
-            last_node = last_node.next
-        self.last = last_node
-
-        # Restore the current_order pointer
         if current_id is not None:
             node = self.first
             while node:
@@ -142,63 +118,43 @@ class Inventory:
                     self.current_order = node
                     break
                 node = node.next
+        else:
+            self.current_order = self.first
 
-        print("Inventory sorted.")
+        print("Inventory sorted successfully.")
 
-    def sort_by_delivery_time(self):
-        # Si la lista está vacía o tiene un solo elemento, no hay nada que ordenar.
-        if not self.first or not self.first.next:
-            print("El inventario ya está ordenado o está vacío.")
-            return
-
-        # Guarda el ID del pedido actual para restaurar el puntero después de ordenar.
-        current_id = self.current_order.order.id if self.current_order else None
-
-        sorted_head = None
+    def remove_order_by_id(self, order_id):
+        """Elimina un pedido del inventario por su ID."""
+        node_to_remove = None
         current = self.first
-
-        # Se utiliza el algoritmo de ordenamiento por inserción para la lista enlazada.
         while current:
-            next_to_process = current.next
-            current.prev = None
-            current.next = None
+            if current.order.id == order_id:
+                node_to_remove = current
+                break
+            current = current.next
 
-            # Inserta al principio si sorted_head es None o la hora de entrega del actual es menor.
-            if (sorted_head is None or
-                    current.order.release_time < sorted_head.order.release_time):
-                current.next = sorted_head
-                if sorted_head:
-                    sorted_head.prev = current
-                sorted_head = current
+        if node_to_remove is None:
+            return False
+
+        # Si el pedido a eliminar es el actual, mover el puntero `current_order`
+        if node_to_remove == self.current_order:
+            if self.current_order.next:
+                self.current_order = self.current_order.next
             else:
-                # Busca la posición correcta para insertar el nodo actual.
-                seeker = sorted_head
-                # Avanza mientras el siguiente nodo tenga una hora menor o igual al actual.
-                while (seeker.next and seeker.next.order.release_time <= current.order.release_time):
-                    seeker = seeker.next
+                self.current_order = self.current_order.prev
 
-                current.next = seeker.next
-                if seeker.next:
-                    seeker.next.prev = current
-                seeker.next = current
-                current.prev = seeker
+        # Desconectar el nodo de la lista
+        if node_to_remove.prev:
+            node_to_remove.prev.next = node_to_remove.next
+        else:
+            self.first = node_to_remove.next
 
-            current = next_to_process
+        if node_to_remove.next:
+            node_to_remove.next.prev = node_to_remove.prev
+        else:
+            self.last = node_to_remove.prev
 
-        # Actualiza los punteros 'first' y 'last' de la lista.
-        self.first = sorted_head
-        last_node = self.first
-        while last_node.next:
-            last_node = last_node.next
-        self.last = last_node
-
-        # Restaura el puntero 'current_order' a donde estaba antes de ordenar.
-        if current_id is not None:
-            node = self.first
-            while node:
-                if node.order.id == current_id:
-                    self.current_order = node
-                    break
-                node = node.next
-
-        print("Inventario ordenado por hora de entrega.")
+        self.current_weight -= node_to_remove.order.weight
+        self.order_count -= 1
+        print(f"Order {order_id} removed from inventory.")
+        return True
