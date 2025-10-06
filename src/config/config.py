@@ -18,7 +18,7 @@ REP_BONUS_STREAK = 2
 REP_PENALTY_SLIGHTLY_LATE = -2
 REP_PENALTY_LATE = -5
 REP_PENALTY_VERY_LATE = -10
-REP_PENALTY_CANCEL_ORDER = -4
+REP_PENALTY_CANCEL_ORDER = 4
 
 # CAMBIO IMPORTANTE: Tiempo base de pedido en segundos (10 minutos = 600 segundos)
 # Este es el tiempo que se usa para calcular si una entrega es "temprana" (20% antes del deadline)

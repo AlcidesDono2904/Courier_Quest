@@ -9,6 +9,7 @@ from src.logic.animated_window import AnimatedWindow
 from src.logic.road_line import RoadLine
 
 class MainMenu:
+    """Clase que maneja el menú principal del juego, incluyendo la lógica y el dibujo de todos sus elementos."""
     def __init__(self, screen, width, height):
         self.screen = screen
         self.width = width
