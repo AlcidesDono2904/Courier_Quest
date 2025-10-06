@@ -3,6 +3,7 @@ import random
 from src.logic.animated_sprite import AnimatedSprite
 
 class AnimatedWindow(AnimatedSprite):
+    """Se encarga de la lógica y el dibujo de las ventanas animadas en el menú principal."""
     def __init__(self, x, y, width, height):
         super().__init__(x, y)
         self.width = width

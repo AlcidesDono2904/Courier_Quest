@@ -3,6 +3,7 @@ import math
 from src.logic.animated_sprite import AnimatedSprite
 
 class AnimatedCyclist(AnimatedSprite):
+    '''Se encarga de la lógica y el dibujo del ciclista animado en el menú principal.'''
     def __init__(self, x, y):
         super().__init__(x, y)
         self.bounce_offset = 0
