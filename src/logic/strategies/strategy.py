@@ -1,17 +1,17 @@
 from abc import ABC, abstractmethod
 from ..game import Game
-from ..player import Player
+from ..rival import Rival
 
 class Strategy(ABC):
     """Abstract base class for different strategies."""
-    def __init__(self, game: Game, player: Player):
+    def __init__(self, game: Game, rival: Rival):
         self.game = game
-        self.player = player
+        self.rival = rival
 
     @abstractmethod
     def _find_path(self, start: tuple[int, int], end: tuple[int, int]) -> list[tuple[int, int]]:
         """
-        Finds a path from start to end coordinates.
+        Finds a path from start to end coordinates. Will use algorithm like A*.
         Args:
             start (tuple[int, int]): Starting coordinates.
             end (tuple[int, int]): Ending coordinates.
