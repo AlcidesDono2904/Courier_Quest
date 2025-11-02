@@ -1,5 +1,5 @@
-from .player import Player
-from .strategies.strategy import Strategy
+from src.logic.player import Player
+from src.logic.strategies.strategy import Strategy
 
 class Rival(Player):
     """Representa al repartidor rival (IA)."""
@@ -8,7 +8,7 @@ class Rival(Player):
         super().__init__(x, y, income_goal)
         self.strategy = strategy
 
-    def setStrategy(self, strategy: Strategy):
+    def set_strategy(self, strategy: Strategy):
         """
         Establece la estrategia del rival.
         Args:
@@ -32,12 +32,7 @@ class Rival(Player):
         self.x += dx
         self.y += dy
     
-    def decide_next_move(self, game_state):
-        """
-        Decide el próximo movimiento basado en la estrategia.
-        Args:
-            game_state: El estado actual del juego.
-        """
-        
+    def decide_next_move(self):
+        """Decide el próximo movimiento basado en la estrategia."""
         decision = self.strategy.next_move()
         self._move(decision)

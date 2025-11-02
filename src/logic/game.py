@@ -4,10 +4,14 @@ from datetime import datetime, timedelta, timezone
 from src.logic.proxy import Proxy
 from src.logic.city import City, OrderManager
 from src.logic.player import Player
+
+from src.logic.strategies.easy_strategy import EasyStrategy
 from src.logic.order import Order
 from src.logic.game_state import GameState
 from src.logic.ui import UIManager
 from src.config.config import WEATHER_MULTIPLIERS
+
+RIVAL_INTERACTION_RATE = 2.0  # segundos entre interacciones del rival
 
 class Game:
     """Bucle principal del juego."""
@@ -59,7 +63,12 @@ class Game:
         self.saving_overlay_timer = 0.0
         self.saving_overlay_duration = 0.7 
         self._saving_overlay_message = "Juego guardado. Volviendo al menú..."
-
+        
+        # Rival 
+        from src.logic.rival import Rival
+        self.rival = Rival(2, 2, self.city.goal, None)
+        self.rival.set_strategy(EasyStrategy(self, self.rival))
+        self.rival_interaction_rate = RIVAL_INTERACTION_RATE
    
     def handle_input(self):
         """Maneja input del jugador (eventos + movimiento por polling)."""
@@ -269,12 +278,19 @@ class Game:
                 self.end_game(True)
             else:
                 self.end_game(False)
+                
+        # Rival update
+        if self.rival_interaction_rate > 0:
+            self.rival_interaction_rate -= dt
+        else:
+            self.rival.decide_next_move()
+            self.rival_interaction_rate = RIVAL_INTERACTION_RATE     
 
     def draw(self):
         self.screen.fill((20, 20, 30))
 
         available = self.order_manager.get_available()
-        self.ui.draw_map(self.screen, self.city, self.player.x, self.player.y, available)
+        self.ui.draw_map(self.screen, self.city, self.player.x, self.player.y, available, self.rival)
         self.ui.draw_weather_effects(self.screen, self.current_weather)
 
         current_game_time = self.get_current_game_datetime()

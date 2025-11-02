@@ -1,10 +1,15 @@
+from __future__ import annotations
 from abc import ABC, abstractmethod
-from ..game import Game
-from ..rival import Rival
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from src.logic.game import Game
+    from src.logic.rival import Rival
 
 class Strategy(ABC):
     """Abstract base class for different strategies."""
-    def __init__(self, game: Game, rival: Rival):
+
+    def __init__(self, game: 'Game', rival: 'Rival'):
         self.game = game
         self.rival = rival
 

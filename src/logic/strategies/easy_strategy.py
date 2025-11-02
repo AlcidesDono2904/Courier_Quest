@@ -1,5 +1,5 @@
-from .strategy import Strategy
-from ..player import Player
+from src.logic.strategies.strategy import Strategy
+from src.logic.player import Player
 
 
 class EasyStrategy(Strategy):
@@ -8,6 +8,9 @@ class EasyStrategy(Strategy):
     def __init__(self, game, player: Player):
         super().__init__(game, player)
 
+    def _find_path(self, start: tuple[int, int], end: tuple[int, int]) -> list[tuple[int, int]]:
+        pass
+    
     def next_move(self) -> tuple[int, int]:
         """Return the next move as (dx, dy).
 
