@@ -1,27 +1,31 @@
 from abc import ABC, abstractmethod
-from src.logic.game import Game
+from ..game import Game
+from ..player import Player
 
 class Strategy(ABC):
     """Abstract base class for different strategies."""
-    def __init__(self, game: Game):
+    def __init__(self, game: Game, player: Player):
         self.game = game
+        self.player = player
 
     @abstractmethod
-    def _findPath(self, start: tuple[int, int], end: tuple[int, int]) -> list[tuple[int, int]]:
+    def _find_path(self, start: tuple[int, int], end: tuple[int, int]) -> list[tuple[int, int]]:
         """
         Finds a path from start to end coordinates.
         Args:
             start (tuple[int, int]): Starting coordinates.
             end (tuple[int, int]): Ending coordinates.
+        Returns:
+            list[tuple[int, int]]: List of coordinates representing the path.
         """
         pass
 
     @abstractmethod
-    def nextMove(self) -> tuple[int, int]:
+    def next_move(self) -> tuple[int, int]:
         """
         Find next move
         Returns:
-            tuple[int, int]: the next move as (x, y) coordinates.
+            coords (tuple[int, int]): The next move as (x, y) coordinates.
         """
         # Main method to be implemented by subclasses.
         # Should select and find a path to an order if there
