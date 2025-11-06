@@ -81,6 +81,8 @@ class HardStrategy(Strategy):
             dx = next_step[0] - self.rival.x
             dy = next_step[1] - self.rival.y
             return (dx, dy)
+        else:
+            self.decide_job_action(0)
         return (0, 0)
 
     def _evaluate_order(self, order_data: dict, current_pos: tuple[int, int]) -> float:

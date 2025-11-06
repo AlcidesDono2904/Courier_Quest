@@ -138,6 +138,8 @@ class MediumStrategy(Strategy):
             
             # Debe ser un movimiento unitario
             return (dx, dy)
+        else:
+            self.decide_job_action(0)
             
         return (0, 0)
     

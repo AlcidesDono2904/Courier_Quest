@@ -6,12 +6,16 @@ from src.logic.city import City, OrderManager
 from src.logic.player import Player
 
 from src.logic.strategies.easy_strategy import EasyStrategy
+from src.logic.strategies.medium_strategy import MediumStrategy
+from src.logic.strategies.hard_strategy import HardStrategy
+
 from src.logic.order import Order
 from src.logic.game_state import GameState
 from src.logic.ui import UIManager
 from src.config.config import WEATHER_MULTIPLIERS
 
-RIVAL_INTERACTION_RATE = 2.0  # segundos entre interacciones del rival
+# 1.3 para version final, 0.6 para testing
+RIVAL_INTERACTION_RATE = 0.6  # segundos entre interacciones del rival
 
 class Game:
     """Bucle principal del juego."""
@@ -65,8 +69,8 @@ class Game:
         
         # Rival 
         from src.logic.rival import Rival
-        self.rival = Rival(2, 2, self.city.goal, None)
-        self.rival.set_strategy(EasyStrategy(self, self.rival))
+        self.rival = Rival(0, 0, self.city.goal, None)
+        self.rival.set_strategy(HardStrategy(self, self.rival))
         self.rival_interaction_rate = RIVAL_INTERACTION_RATE
    
     def handle_input(self):
@@ -246,7 +250,7 @@ class Game:
             return
 
         if not self.player_moved_this_frame:
-            self.player.recover_stamina(dt)
+            self.player.recover_stamina(dt*0.22)
 
         self.elapsed_time += dt
         self.update_weather(dt)

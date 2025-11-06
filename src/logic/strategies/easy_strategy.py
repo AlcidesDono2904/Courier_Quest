@@ -1,8 +1,13 @@
+from __future__ import annotations
 import random
+from typing import TYPE_CHECKING
+
 from .strategy import Strategy
 from ..order import Order
 from ..city import City
-from ..game import Game
+
+if TYPE_CHECKING:
+    from ..game import Game
 
 class EasyStrategy(Strategy):
     """
@@ -25,9 +30,6 @@ class EasyStrategy(Strategy):
         Retorna None o una lista vacía.
         """
         return []
-
-    def _find_path(self, start: tuple[int, int], end: tuple[int, int]) -> list[tuple[int, int]]:
-        pass
     
     def next_move(self) -> tuple[int, int]:
         """
