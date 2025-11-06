@@ -31,7 +31,6 @@ class Game:
         self.ui = UIManager(1200, 800)
 
         self.game_duration = 900
-
         # Usar UTC para evitar problemas con zona horaria local
         self.game_start_datetime = datetime(2025, 9, 1, 12, 0, 0, tzinfo=timezone.utc)
 
