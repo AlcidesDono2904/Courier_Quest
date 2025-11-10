@@ -20,7 +20,8 @@ RIVAL_INTERACTION_RATE = 0.6  # segundos entre interacciones del rival
 class Game:
     """Bucle principal del juego."""
 
-    def __init__(self, player_name):
+    # MODIFICACIÓN: Añadir 'difficulty'
+    def __init__(self, player_name, difficulty: str):
         pygame.init()
         self.screen = pygame.display.set_mode((1200, 800))
         pygame.display.set_caption("Courier Quest")
@@ -70,7 +71,19 @@ class Game:
         # Rival 
         from src.logic.rival import Rival
         self.rival = Rival(0, 0, self.city.goal, None)
-        self.rival.set_strategy(HardStrategy(self, self.rival))
+
+        # --- LÓGICA DE DIFICULTAD (NUEVA) ---
+        strategy_map = {
+            "easy": EasyStrategy,
+            "medium": MediumStrategy,
+            "hard": HardStrategy
+        }
+        
+        # Asignar estrategia, usando HardStrategy como fallback
+        StrategyClass = strategy_map.get(difficulty.lower(), HardStrategy)
+        self.rival.set_strategy(StrategyClass(self, self.rival))
+        # ------------------------------------
+
         self.rival_interaction_rate = RIVAL_INTERACTION_RATE
    
     def handle_input(self):
@@ -413,4 +426,3 @@ class Game:
         if getattr(self, "loaded_slot", None):
            self.game_state.delete_slot(self.loaded_slot)
            self.loaded_slot = None
-        
