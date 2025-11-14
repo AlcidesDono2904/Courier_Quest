@@ -1,5 +1,6 @@
 import math
 import random
+import heapq
 from ..order import Order
 from ..city import City
 from .strategy import Strategy
@@ -24,6 +25,9 @@ class MediumStrategy(Strategy):
         self.re_evaluation_timer = random.uniform(4.0, 10.0)
         # Ruta almacenada (lista de coordenadas)
         self.current_path: list[tuple[int, int]] = [] 
+
+    def _heuristic(self, a: tuple[int, int], b: tuple[int, int]) -> float:
+        return abs(a[0] - b[0]) + abs(a[1] - b[1])
 
     def _evaluate_order(self, order_data: dict, current_pos: tuple[int, int]) -> float:
         """
@@ -56,49 +60,53 @@ class MediumStrategy(Strategy):
     
     def _find_path(self, start: tuple[int, int], end: tuple[int, int]) -> list[tuple[int, int]]:
         """
-        Implementación simplificada:
-        Calcula la dirección directa hacia el destino, esquivando obstáculos
-        básicos en línea recta y priorizando el eje más lejano.
+        Implementación clásica del algoritmo A* en una cuadrícula.
+        Considera bloqueos y penalizaciones por clima.
+        (Copiado de HardStrategy para que Medium funcione)
         """
-        path = []
         city: City = self.game.city
-        x, y = start
-        ex, ey = end
+        weather_mult = self.game.get_current_weather_multiplier()
+        width, height = city.width, city.height
+        goal = end # Usamos 'end' como 'goal' para A*
 
-        for _ in range(30): # Límite de 30 pasos para evitar bucles infinitos en esquinas
-            if (x, y) == (ex, ey):
-                break
-                
-            dx = 1 if ex > x else -1 if ex < x else 0
-            dy = 1 if ey > y else -1 if ey < y else 0
-            
-            # Decide el movimiento, priorizando el eje con mayor diferencia (más 'Greedy')
-            if abs(ex - x) > abs(ey - y):
-                # Prioriza el movimiento en X
-                nx, ny = x + dx, y 
-                blocked_x = city.is_blocked(nx, ny)
-                
-                # Si está bloqueado en X, intenta moverse en Y
-                if blocked_x and dy != 0:
-                    nx, ny = x, y + dy
-            else:
-                # Prioriza el movimiento en Y
-                nx, ny = x, y + dy
-                blocked_y = city.is_blocked(nx, ny)
+        open_set = []
+        heapq.heappush(open_set, (0, start))
+        came_from = {}
+        g_score = {start: 0}
+        f_score = {start: self._heuristic(start, goal)}
 
-                # Si está bloqueado en Y, intenta moverse en X
-                if blocked_y and dx != 0:
-                    nx, ny = x + dx, y
+        while open_set:
+            _, current = heapq.heappop(open_set)
 
-            # Verificación final de bloqueo antes de avanzar
-            if city.is_blocked(nx, ny):
-                break # Bloqueo, abortar el camino por ahora
-            
-            # Movimiento válido
-            path.append((nx, ny))
-            x, y = nx, ny
-            
-        return path
+            if current == goal:
+                # Reconstruir el camino
+                path = []
+                while current in came_from:
+                    path.append(current)
+                    current = came_from[current]
+                path.reverse()
+                return path
+
+            for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                neighbor = (current[0] + dx, current[1] + dy)
+                x, y = neighbor
+                if not (0 <= x < width and 0 <= y < height):
+                    continue  # fuera del mapa
+                if city.is_blocked(x, y):
+                    continue  # edificio o muro
+
+                # Costo del movimiento (afectado por clima)
+                terrain_cost = 1.0 / weather_mult
+                tentative_g = g_score.get(current, math.inf) + terrain_cost
+
+                if tentative_g < g_score.get(neighbor, math.inf):
+                    came_from[neighbor] = current
+                    g_score[neighbor] = tentative_g
+                    f_score[neighbor] = tentative_g + self._heuristic(neighbor, goal)
+                    heapq.heappush(open_set, (f_score[neighbor], neighbor))
+
+        # Si no hay camino, retornar vacío
+        return []
     
     def _search_next_objective(self) -> dict | None:
         """
