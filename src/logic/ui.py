@@ -125,7 +125,7 @@ class UIManager:
             flash.fill((255, 255, 255, 150))
             surface.blit(flash, (0, 0))
         
-    def draw_hud(self, surface, player, game_time, weather, elapsed, current_game_time):
+    def draw_hud(self, surface, player, rival, game_time, weather, elapsed, current_game_time):
         """Dibuja el HUD principal."""
         panel_rect = pygame.Rect(0, 0, 190, self.screen_height)
         pygame.draw.rect(surface, self.colors['panel'], panel_rect)
@@ -198,6 +198,23 @@ class UIManager:
         self._draw_progress_bar(surface, 10, y, 170, 10, weight_pct, self.colors['warning'])
         y += 20
         self._draw_text(surface, f"Pedidos: {player.inventory.order_count}", 10, y,
+                       self.font_small, self.colors['text_dim'])
+        # --- Información del Rival ---
+        y += 40
+        self._draw_text(surface, "Rival:", 10, y, 
+                       self.font_medium, self.colors['rival'])
+        y += 30
+        
+        # Ingresos del Rival
+        rival_progress = rival.total_income / rival.income_goal
+        self._draw_text(surface, f"Ingresos Rival: ${rival.total_income}", 10, y, 
+                       self.font_small, self.colors['text'])
+        y += 20
+        self._draw_progress_bar(surface, 10, y, 170, 10, rival_progress, self.colors['rival'])
+        y += 20
+
+        # Pedidos del Rival
+        self._draw_text(surface, f"Pedidos Rival: {rival.inventory.order_count}", 10, y,
                        self.font_small, self.colors['text_dim'])
         
     def draw_map(self, surface, city, player_x, player_y, available_orders, rival):

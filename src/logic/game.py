@@ -228,6 +228,35 @@ class Game:
             msg = f"¡Entregado! +${int(result['payout'])} | Rep: {result['rep_change']:+d}"
             self.show_message(msg, 3.0)
 
+    def accept_order_at_location_rival(self, rival_player, order_data):
+        """Permite al rival aceptar un pedido en su ubicación."""
+        pickup = order_data['pickup']
+        if [rival_player.x, rival_player.y] == pickup:
+            order = Order.from_dict(order_data)
+            if rival_player.accept_order(order):
+                self.order_manager.remove_order(order_data['id'])
+                # No mostramos mensaje, es el rival
+                return True
+        return False
+
+    def complete_delivery_rival(self, rival_player):
+        """Permite al rival completar una entrega."""
+        if rival_player.inventory.current_order is None:
+            return False
+        
+        dropoff = rival_player.inventory.current_order.order.dropoff
+        if [rival_player.x, rival_player.y] != dropoff:
+            return False
+
+        current_game_time = self.get_current_game_datetime()
+        # Usamos la misma lógica de completado del jugador
+        result = rival_player.complete_delivery(current_game_time)
+        
+        if result:
+            # No mostramos mensaje, es el rival
+            return True
+        return False
+
     def update_weather(self, dt):
         self.weather_timer -= dt
         if self.in_transition:
@@ -299,8 +328,17 @@ class Game:
         if self.rival_interaction_rate > 0:
             self.rival_interaction_rate -= dt
         else:
-            self.rival.decide_next_move()
-            self.rival_interaction_rate = RIVAL_INTERACTION_RATE     
+            # 1. El rival decide QUÉ hacer (aceptar/entregar pedido).
+            #    En las estrategias 'medium' y 'hard', esto también planifica la ruta.
+            #    En la estrategia 'easy', esto decide si intenta tomar un pedido.
+            if hasattr(self.rival, 'strategy') and self.rival.strategy:
+                self.rival.strategy.decide_job_action(dt) 
+            
+            # 2. El rival ejecuta el SIGUIENTE movimiento de su plan 
+            #    (o un movimiento al azar si es 'easy').
+            self.rival.decide_next_move() 
+            
+            self.rival_interaction_rate = RIVAL_INTERACTION_RATE    
 
     def draw(self):
         self.screen.fill((20, 20, 30))
@@ -311,7 +349,7 @@ class Game:
 
         current_game_time = self.get_current_game_datetime()
         self.ui.draw_hud(
-            self.screen, self.player, self.game_duration,
+            self.screen, self.player, self.rival, self.game_duration,
             self.current_weather, self.elapsed_time, current_game_time
         )
         self.ui.draw_current_order(self.screen, self.player.inventory, self.city)
