@@ -5,6 +5,7 @@ import os
 from src.logic.button import Button
 
 class RoadLine:
+    """Se encarga de la lógica y el dibujo de las líneas de la carretera en el menú principal."""
     def __init__(self, y):
         self.x = -60
         self.y = y

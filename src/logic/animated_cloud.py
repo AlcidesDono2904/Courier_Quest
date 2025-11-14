@@ -3,6 +3,7 @@ import random
 from src.logic.animated_sprite import AnimatedSprite
 
 class AnimatedCloud(AnimatedSprite):
+    """Se encarga de la lógica y el dibujo de las nubes animadas en el menú principal."""
     def __init__(self, x, y, size, speed):
         super().__init__(x, y)
         self.size = size

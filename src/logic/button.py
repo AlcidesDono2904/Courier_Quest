@@ -2,7 +2,7 @@ import pygame
 import os
 
 class Button:
-
+    """Clase para crear botones interactivos en la interfaz gráfica."""
     def __init__(self, text, x, y, width, height, base_color, hover_color, text_color, border_color=(255, 255, 255), border_width=2, font_size=36, font_path=None):
         self.rect = pygame.Rect(x, y, width, height)
         self.text = text
