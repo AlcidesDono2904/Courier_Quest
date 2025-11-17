@@ -4,15 +4,24 @@ from datetime import datetime, timedelta, timezone
 from src.logic.proxy import Proxy
 from src.logic.city import City, OrderManager
 from src.logic.player import Player
+
+from src.logic.strategies.easy_strategy import EasyStrategy
+from src.logic.strategies.medium_strategy import MediumStrategy
+from src.logic.strategies.hard_strategy import HardStrategy
+
 from src.logic.order import Order
 from src.logic.game_state import GameState
 from src.logic.ui import UIManager
 from src.config.config import WEATHER_MULTIPLIERS
 
+# 1.3 para version final, 0.6 para testing
+RIVAL_INTERACTION_RATE = 0.6  # segundos entre interacciones del rival
+
 class Game:
     """Bucle principal del juego."""
 
-    def __init__(self, player_name):
+    # MODIFICACIÓN: Añadir 'difficulty'
+    def __init__(self, player_name, difficulty: str):
         pygame.init()
         self.screen = pygame.display.set_mode((1200, 800))
         pygame.display.set_caption("Courier Quest")
@@ -31,7 +40,6 @@ class Game:
         self.ui = UIManager(1200, 800)
 
         self.game_duration = 900
-
         # Usar UTC para evitar problemas con zona horaria local
         self.game_start_datetime = datetime(2025, 9, 1, 12, 0, 0, tzinfo=timezone.utc)
 
@@ -59,7 +67,24 @@ class Game:
         self.saving_overlay_timer = 0.0
         self.saving_overlay_duration = 0.7 
         self._saving_overlay_message = "Juego guardado. Volviendo al menú..."
+        
+        # Rival 
+        from src.logic.rival import Rival
+        self.rival = Rival(0, 0, self.city.goal, None)
 
+        # --- LÓGICA DE DIFICULTAD (NUEVA) ---
+        strategy_map = {
+            "easy": EasyStrategy,
+            "medium": MediumStrategy,
+            "hard": HardStrategy
+        }
+        
+        # Asignar estrategia, usando HardStrategy como fallback
+        StrategyClass = strategy_map.get(difficulty.lower(), HardStrategy)
+        self.rival.set_strategy(StrategyClass(self, self.rival))
+        # ------------------------------------
+
+        self.rival_interaction_rate = RIVAL_INTERACTION_RATE
    
     def handle_input(self):
         """Maneja input del jugador (eventos + movimiento por polling)."""
@@ -203,6 +228,35 @@ class Game:
             msg = f"¡Entregado! +${int(result['payout'])} | Rep: {result['rep_change']:+d}"
             self.show_message(msg, 3.0)
 
+    def accept_order_at_location_rival(self, rival_player, order_data):
+        """Permite al rival aceptar un pedido en su ubicación."""
+        pickup = order_data['pickup']
+        if [rival_player.x, rival_player.y] == pickup:
+            order = Order.from_dict(order_data)
+            if rival_player.accept_order(order):
+                self.order_manager.remove_order(order_data['id'])
+                # No mostramos mensaje, es el rival
+                return True
+        return False
+
+    def complete_delivery_rival(self, rival_player):
+        """Permite al rival completar una entrega."""
+        if rival_player.inventory.current_order is None:
+            return False
+        
+        dropoff = rival_player.inventory.current_order.order.dropoff
+        if [rival_player.x, rival_player.y] != dropoff:
+            return False
+
+        current_game_time = self.get_current_game_datetime()
+        # Usamos la misma lógica de completado del jugador
+        result = rival_player.complete_delivery(current_game_time)
+        
+        if result:
+            # No mostramos mensaje, es el rival
+            return True
+        return False
+
     def update_weather(self, dt):
         self.weather_timer -= dt
         if self.in_transition:
@@ -238,7 +292,7 @@ class Game:
             return
 
         if not self.player_moved_this_frame:
-            self.player.recover_stamina(dt)
+            self.player.recover_stamina(dt*0.22)
 
         self.elapsed_time += dt
         self.update_weather(dt)
@@ -269,17 +323,33 @@ class Game:
                 self.end_game(True)
             else:
                 self.end_game(False)
+                
+        # Rival update
+        if self.rival_interaction_rate > 0:
+            self.rival_interaction_rate -= dt
+        else:
+            # 1. El rival decide QUÉ hacer (aceptar/entregar pedido).
+            #    En las estrategias 'medium' y 'hard', esto también planifica la ruta.
+            #    En la estrategia 'easy', esto decide si intenta tomar un pedido.
+            if hasattr(self.rival, 'strategy') and self.rival.strategy:
+                self.rival.strategy.decide_job_action(dt) 
+            
+            # 2. El rival ejecuta el SIGUIENTE movimiento de su plan 
+            #    (o un movimiento al azar si es 'easy').
+            self.rival.decide_next_move() 
+            
+            self.rival_interaction_rate = RIVAL_INTERACTION_RATE    
 
     def draw(self):
         self.screen.fill((20, 20, 30))
 
         available = self.order_manager.get_available()
-        self.ui.draw_map(self.screen, self.city, self.player.x, self.player.y, available)
+        self.ui.draw_map(self.screen, self.city, self.player.x, self.player.y, available, self.rival)
         self.ui.draw_weather_effects(self.screen, self.current_weather)
 
         current_game_time = self.get_current_game_datetime()
         self.ui.draw_hud(
-            self.screen, self.player, self.game_duration,
+            self.screen, self.player, self.rival, self.game_duration,
             self.current_weather, self.elapsed_time, current_game_time
         )
         self.ui.draw_current_order(self.screen, self.player.inventory, self.city)
@@ -394,4 +464,3 @@ class Game:
         if getattr(self, "loaded_slot", None):
            self.game_state.delete_slot(self.loaded_slot)
            self.loaded_slot = None
-        

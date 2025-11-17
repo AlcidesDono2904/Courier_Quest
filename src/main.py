@@ -14,6 +14,8 @@ from src.logic.game import Game
 from src.logic.main_menu import MainMenu
 from src.logic.input_box import InputBox
 from src.logic.game_state import GameState
+from src.logic.button import Button 
+
 
 def _format_elapsed(seconds: float) -> str:
     seconds = int(seconds or 0)
@@ -93,6 +95,86 @@ def choose_load_slot_with_preview(screen, clock, game_state: GameState):
         pygame.display.flip()
         clock.tick(60)
 
+# --- FUNCIÓN CORREGIDA: ELEGIR DIFICULTAD ---
+def choose_difficulty_screen(screen, clock):
+    """Menú para elegir la dificultad del rival IA."""
+    font_title = pygame.font.Font(None, 64)
+    font_small = pygame.font.Font(None, 24)
+
+    # 1. Limpiar cola de eventos (defensivo)
+    pygame.event.get()
+    
+    # 2. Variable de control para ignorar el mouse residual
+    frame_counter = 0
+
+    # Definición de botones
+    button_width = 300
+    button_height = 60
+    spacing = 30
+    
+    center_x = (1200 - button_width) // 2
+    start_y = 250
+
+    buttons = {
+        "easy": Button(
+            "FÁCIL (Paseo relajado)",
+            center_x, start_y,
+            button_width, button_height,
+            (40, 60, 40), (80, 150, 80), (255, 255, 255), (0, 255, 136), 2, 24
+        ),
+        "medium": Button(
+            "MEDIO (Greedy Search)",
+            center_x, start_y + button_height + spacing,
+            button_width, button_height,
+            (60, 60, 40), (150, 150, 80), (255, 255, 255), (255, 215, 0), 2, 24
+        ),
+        "hard": Button(
+            "DIFÍCIL (A* Pathfinding)",
+            center_x, start_y + 2 * (button_height + spacing),
+            button_width, button_height,
+            (60, 40, 40), (150, 80, 80), (255, 255, 255), (255, 100, 100), 2, 24
+        )
+    }
+
+    running = True
+    while running:
+        # Controlar la velocidad y contar frames
+        clock.tick(60) 
+        frame_counter += 1
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                return "exit"
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                return "menu"
+            
+            # --- CORRECCIÓN ROBUSTA: Ignorar eventos de mouse en los primeros frames ---
+            if frame_counter < 5 and (event.type == pygame.MOUSEBUTTONDOWN or event.type == pygame.MOUSEBUTTONUP):
+                continue
+            # -------------------------------------------------------------------------
+            
+            for key, button in buttons.items():
+                if button.handle_event(event):
+                    return key
+
+        screen.fill((20, 20, 40))
+        
+        # Título
+        title_surf = font_title.render("Seleccionar Dificultad del Rival", True, (0, 255, 136))
+        screen.blit(title_surf, title_surf.get_rect(center=(600, 150)))
+        
+        # Dibujar botones
+        for button in buttons.values():
+            button.draw(screen)
+
+        # Instrucción
+        hint = "ESC para volver al Menú Principal"
+        hint_surf = font_small.render(hint, True, (200, 200, 200))
+        screen.blit(hint_surf, hint_surf.get_rect(center=(600, 720)))
+        
+        pygame.display.flip()
+# --- FIN FUNCIÓN CORREGIDA ---
+
 
 def main():
     """Punto de entrada del juego."""
@@ -108,10 +190,26 @@ def main():
 
         # NUEVA PARTIDA
         if action == "start_game":
+            
+            # Limpiar cola de eventos, la corrección más fuerte está en choose_difficulty_screen
+            pygame.event.get() 
+            
+            # 1. Elegir dificultad
+            difficulty = choose_difficulty_screen(screen, clock)
+            if difficulty in ["exit", "menu"]:
+                if difficulty == "exit":
+                    break
+                continue
+            
+            # 2. Ingresar nombre
             player_name = ask_player_name(screen, clock)
+            
+            # 3. Mostrar instrucciones
             show_instructions_screen(screen, clock)
+            
             try:
-                game = Game(player_name)
+                # 4. Iniciar juego (Se pasa la dificultad)
+                game = Game(player_name, difficulty) 
                 result = game.run()        
                 if result == "exit":
                     break                 
@@ -121,6 +219,7 @@ def main():
                 continue                  
 
         elif action == "load_game":
+            # MODIFICADO
             result = load_and_start_game(screen, clock)
             if result == "exit":
                 break
@@ -142,6 +241,7 @@ def main():
 
 def ask_player_name(screen, clock):
     """Muestra una pantalla para que el jugador ingrese su nombre."""
+    # ... (Resto de la función ask_player_name)
     input_box = InputBox(400, 300, 400, 50)
     done = False
     player_name = "Player"
@@ -189,6 +289,7 @@ def ask_player_name(screen, clock):
 
 def show_instructions_screen(screen, clock):
     """Muestra la pantalla de instrucciones antes de empezar a jugar."""
+    # ... (Resto de la función show_instructions_screen)
     font_title = pygame.font.Font(None, 64)
     font_header = pygame.font.Font(None, 36)
     font_text = pygame.font.Font(None, 28)
@@ -254,6 +355,10 @@ def load_and_start_game(screen, clock):
     """
     try:
         gs = GameState()
+        
+        # Limpiar cola de eventos antes de la nueva pantalla
+        pygame.event.get() 
+        
         slot = choose_load_slot_with_preview(screen, clock, gs)
         if slot is None:
             return "menu"
@@ -261,7 +366,8 @@ def load_and_start_game(screen, clock):
         data = gs.load_game(slot)
         if data:
             player_name = data.get('player_name', 'Player')
-            game = Game(player_name)
+            # MODIFICACIÓN: Se pasa una dificultad por defecto al cargar.
+            game = Game(player_name, "hard")
             game.load_game(data)
             game.loaded_slot = slot
             print(f"Partida cargada exitosamente desde Slot {slot}!")
@@ -284,6 +390,7 @@ def load_and_start_game(screen, clock):
 
 def show_high_scores(screen, clock):
     """Muestra la pantalla de puntajes altos."""
+    # ... (Resto de la función show_high_scores)
     # Cargar puntajes
     try:
         with open("data/puntajes.json", 'r') as f:
@@ -385,6 +492,7 @@ def show_high_scores(screen, clock):
 
 def show_message_screen(screen, clock, title, message):
     """Muestra una pantalla de mensaje temporal."""
+    # ... (Resto de la función show_message_screen)
     font_title = pygame.font.Font(None, 48)
     font_message = pygame.font.Font(None, 32)
 

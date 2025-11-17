@@ -27,7 +27,8 @@ class UIManager:
             'road': (80, 80, 90),
             'building': (100, 100, 120),
             'park': (50, 150, 80),
-            'player': (100, 200, 255)
+            'player': (100, 200, 255),
+            'rival': (255, 100, 100),
         }
         
         # Layout
@@ -124,7 +125,7 @@ class UIManager:
             flash.fill((255, 255, 255, 150))
             surface.blit(flash, (0, 0))
         
-    def draw_hud(self, surface, player, game_time, weather, elapsed, current_game_time):
+    def draw_hud(self, surface, player, rival, game_time, weather, elapsed, current_game_time):
         """Dibuja el HUD principal."""
         panel_rect = pygame.Rect(0, 0, 190, self.screen_height)
         pygame.draw.rect(surface, self.colors['panel'], panel_rect)
@@ -198,8 +199,25 @@ class UIManager:
         y += 20
         self._draw_text(surface, f"Pedidos: {player.inventory.order_count}", 10, y,
                        self.font_small, self.colors['text_dim'])
+        # --- Información del Rival ---
+        y += 40
+        self._draw_text(surface, "Rival:", 10, y, 
+                       self.font_medium, self.colors['rival'])
+        y += 30
         
-    def draw_map(self, surface, city, player_x, player_y, available_orders):
+        # Ingresos del Rival
+        rival_progress = rival.total_income / rival.income_goal
+        self._draw_text(surface, f"Ingresos Rival: ${rival.total_income}", 10, y, 
+                       self.font_small, self.colors['text'])
+        y += 20
+        self._draw_progress_bar(surface, 10, y, 170, 10, rival_progress, self.colors['rival'])
+        y += 20
+
+        # Pedidos del Rival
+        self._draw_text(surface, f"Pedidos Rival: {rival.inventory.order_count}", 10, y,
+                       self.font_small, self.colors['text_dim'])
+        
+    def draw_map(self, surface, city, player_x, player_y, available_orders, rival):
         """Dibuja el mapa con cámara centrada"""
         self.update_camera(player_x, player_y, city.width, city.height)
         
@@ -237,7 +255,14 @@ class UIManager:
         player_rect = pygame.Rect(px + 5, py + 5, self.tile_size - 12, self.tile_size - 12)
         pygame.draw.rect(surface, self.colors['player'], player_rect)
         pygame.draw.rect(surface, (255, 255, 255), player_rect, 2)
-    
+        
+        # Draw rival
+        rx = self.map_offset_x + rival.x * self.tile_size - self.camera_x
+        ry = self.map_offset_y + rival.y * self.tile_size - self.camera_y
+        rival_rect = pygame.Rect(rx + 5, ry + 5, self.tile_size - 12, self.tile_size - 12)
+        pygame.draw.rect(surface, '#FF0000' , rival_rect)
+        pygame.draw.rect(surface, (255, 255, 255), rival_rect, 2)
+
     def draw_current_order(self, surface, inventory, city):
         """Dibuja información del pedido actual."""
         if inventory.current_order is None:
