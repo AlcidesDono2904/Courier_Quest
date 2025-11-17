@@ -108,7 +108,6 @@ class HardStrategy(Strategy):
         current_pos = (self.rival.x, self.rival.y)
         city: City = self.game.city
 
-        # 1. Entregar pedido actual (prioridad alta)
         if self.rival.inventory.current_order:
             dropoff = tuple(self.rival.inventory.current_order.order.dropoff)
 
@@ -118,7 +117,6 @@ class HardStrategy(Strategy):
                 self.target_order_id = None
                 return True
 
-            # Replanificación por clima o fin de ruta
             self.recalc_timer += dt
             current_weather = self.game.get_current_weather_multiplier()
             if not self.current_path or self.recalc_timer >= self.max_recalc_interval \
@@ -127,8 +125,20 @@ class HardStrategy(Strategy):
                 self.last_weather_multiplier = current_weather
                 self.recalc_timer = 0.0
 
-        # 2. Buscar nuevo pedido si no tiene
         elif self.rival.inventory.order_count == 0:
+            
+            if self.target_order_id:
+                available_orders = self.game.order_manager.get_available()
+                is_target_still_available = any(
+                    o["id"] == self.target_order_id for o in available_orders
+                )
+                
+                if not is_target_still_available:
+                    
+                    self.target_order_id = None
+                    self.current_path.clear()
+                    self.re_evaluation_timer = 0.0 
+            
             self.re_evaluation_timer -= dt
             if self.re_evaluation_timer <= 0 or not self.target_order_id:
                 available_orders = self.game.order_manager.get_available()
@@ -141,8 +151,7 @@ class HardStrategy(Strategy):
                     pickup = tuple(best_order["pickup"])
                     self.current_path = self._find_path(current_pos, pickup)
                 self.re_evaluation_timer = random.uniform(5.0, 10.0)
-
-            # Intentar recoger si ya está en el punto de pickup
+                
             if self.target_order_id:
                 available_orders = self.game.order_manager.get_available()
                 for order_data in available_orders:

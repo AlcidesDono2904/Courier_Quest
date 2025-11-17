@@ -199,7 +199,8 @@ class UIManager:
         y += 20
         self._draw_text(surface, f"Pedidos: {player.inventory.order_count}", 10, y,
                        self.font_small, self.colors['text_dim'])
-        # --- Información del Rival ---
+        
+        # Información del Rival 
         y += 40
         self._draw_text(surface, "Rival:", 10, y, 
                        self.font_medium, self.colors['rival'])
@@ -211,11 +212,34 @@ class UIManager:
                        self.font_small, self.colors['text'])
         y += 20
         self._draw_progress_bar(surface, 10, y, 170, 10, rival_progress, self.colors['rival'])
+        y += 30 
+        
+        # Resistencia del Rival 
+        rival_stamina_pct = rival.stamina / 100
+        rival_stamina_color = (self.colors['danger'] if rival_stamina_pct < 0.3
+                              else self.colors['warning'] if rival_stamina_pct < 0.6
+                              else self.colors['success'])
+        self._draw_text(surface, f"Resistencia: {int(rival.stamina)}", 10, y,
+                       self.font_small, self.colors['text'])
         y += 20
+        self._draw_progress_bar(surface, 10, y, 170, 12, rival_stamina_pct, rival_stamina_color)
+        y += 30 
+        
+        # Reputación del Rival 
+        rival_rep_pct = rival.reputation / 100
+        rival_rep_color = (self.colors['danger'] if rival_rep_pct < 0.3
+                          else self.colors['warning'] if rival_rep_pct < 0.7
+                          else self.colors['success'])
+        self._draw_text(surface, f"Reputación: {int(rival.reputation)}", 10, y,
+                       self.font_small, self.colors['text'])
+        y += 20
+        self._draw_progress_bar(surface, 10, y, 170, 12, rival_rep_pct, rival_rep_color)
+        y += 30
 
         # Pedidos del Rival
         self._draw_text(surface, f"Pedidos Rival: {rival.inventory.order_count}", 10, y,
                        self.font_small, self.colors['text_dim'])
+        y += 20
         
     def draw_map(self, surface, city, player_x, player_y, available_orders, rival):
         """Dibuja el mapa con cámara centrada"""

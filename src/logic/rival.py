@@ -18,21 +18,30 @@ class Rival(Player):
         
     def _move(self, direction: tuple[int, int]):
         """
-        Mueve al rival en la dirección dada.
+        Mueve al rival en la dirección dada. (Solo actualiza la posición)
         Args:
             direction (tuple[int, int]): La dirección en la que moverse.
         """
         dx, dy = direction
-        if self.is_exhausted:
-            return
-        # Make sure the move is valid.
-        if dx not in [-1, 0, 1] or dy not in [-1, 0, 1]:
-            raise ValueError("dx and dy must be -1, 0, or 1")
-
         self.x += dx
         self.y += dy
     
-    def decide_next_move(self):
-        """Decide el próximo movimiento basado en la estrategia."""
+    def decide_next_move(self, city, current_weather) -> bool:
+        """Decide el próximo movimiento basado en la estrategia y lo ejecuta, consumiendo resistencia."""
+        
         decision = self.strategy.next_move()
-        self._move(decision)
+        dx, dy = decision
+        new_x = self.x + dx
+        new_y = self.y + dy
+
+        if dx == 0 and dy == 0:
+            return False
+
+        if self.can_move() and not city.is_blocked(new_x, new_y):
+            
+            self.consume_stamina(current_weather) 
+            
+            self._move(decision)
+            return True
+
+        return False 

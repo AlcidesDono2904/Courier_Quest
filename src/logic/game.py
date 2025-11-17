@@ -20,7 +20,6 @@ RIVAL_INTERACTION_RATE = 0.6  # segundos entre interacciones del rival
 class Game:
     """Bucle principal del juego."""
 
-    # MODIFICACIÓN: Añadir 'difficulty'
     def __init__(self, player_name, difficulty: str):
         pygame.init()
         self.screen = pygame.display.set_mode((1200, 800))
@@ -68,22 +67,18 @@ class Game:
         self.saving_overlay_duration = 0.7 
         self._saving_overlay_message = "Juego guardado. Volviendo al menú..."
         
-        # Rival 
         from src.logic.rival import Rival
         self.rival = Rival(0, 0, self.city.goal, None)
 
-        # --- LÓGICA DE DIFICULTAD (NUEVA) ---
         strategy_map = {
             "easy": EasyStrategy,
             "medium": MediumStrategy,
             "hard": HardStrategy
         }
         
-        # Asignar estrategia, usando HardStrategy como fallback
         StrategyClass = strategy_map.get(difficulty.lower(), HardStrategy)
         self.rival.set_strategy(StrategyClass(self, self.rival))
-        # ------------------------------------
-
+       
         self.rival_interaction_rate = RIVAL_INTERACTION_RATE
    
     def handle_input(self):
@@ -235,7 +230,7 @@ class Game:
             order = Order.from_dict(order_data)
             if rival_player.accept_order(order):
                 self.order_manager.remove_order(order_data['id'])
-                # No mostramos mensaje, es el rival
+               
                 return True
         return False
 
@@ -249,11 +244,11 @@ class Game:
             return False
 
         current_game_time = self.get_current_game_datetime()
-        # Usamos la misma lógica de completado del jugador
+       
         result = rival_player.complete_delivery(current_game_time)
         
         if result:
-            # No mostramos mensaje, es el rival
+           
             return True
         return False
 
@@ -324,19 +319,18 @@ class Game:
             else:
                 self.end_game(False)
                 
-        # Rival update
         if self.rival_interaction_rate > 0:
+            
+            self.rival.recover_stamina(dt * 0.22) 
+            
             self.rival_interaction_rate -= dt
+            
         else:
-            # 1. El rival decide QUÉ hacer (aceptar/entregar pedido).
-            #    En las estrategias 'medium' y 'hard', esto también planifica la ruta.
-            #    En la estrategia 'easy', esto decide si intenta tomar un pedido.
+           
             if hasattr(self.rival, 'strategy') and self.rival.strategy:
                 self.rival.strategy.decide_job_action(dt) 
             
-            # 2. El rival ejecuta el SIGUIENTE movimiento de su plan 
-            #    (o un movimiento al azar si es 'easy').
-            self.rival.decide_next_move() 
+            self.rival.decide_next_move(self.city, self.current_weather) 
             
             self.rival_interaction_rate = RIVAL_INTERACTION_RATE    
 

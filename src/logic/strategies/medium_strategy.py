@@ -172,6 +172,20 @@ class MediumStrategy(Strategy):
 
         # 2. Reevaluar y Recoger Pedido (SI EL INVENTARIO ESTÁ VACÍO)
         elif self.rival.inventory.order_count == 0:
+            
+            if self.target_order_id:
+                available_orders = self.game.order_manager.get_available()
+                
+                is_target_still_available = any(
+                    o["id"] == self.target_order_id for o in available_orders
+                )
+                
+                if not is_target_still_available:
+                   
+                    self.target_order_id = None
+                    self.current_path.clear()
+                    self.re_evaluation_timer = 0.0 
+            
             self.re_evaluation_timer -= dt
             
             if self.re_evaluation_timer <= 0 or not self.target_order_id:

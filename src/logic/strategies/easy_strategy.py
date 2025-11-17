@@ -70,17 +70,30 @@ class EasyStrategy(Strategy):
         city: City = self.game.city
         current_pos = [self.rival.x, self.rival.y]
 
-        # 1. Si no tiene pedidos en el inventario, elige uno al azar cada cierto tiempo
+       
         if self.rival.inventory.order_count == 0:
+            
+            
+            if self.target_order_id:
+                available_orders = self.game.order_manager.get_available()
+                is_target_still_available = any(
+                    o["id"] == self.target_order_id for o in available_orders
+                )
+                
+                if not is_target_still_available:
+                    
+                    self.target_order_id = None
+                    self.re_evaluation_timer = 0.0 
+            
             self.re_evaluation_timer -= dt
             if self.re_evaluation_timer <= 0:
                 available_orders = self.game.order_manager.get_available()
                 if available_orders:
-                    # Selección ponderada: más probabilidad de elegir pedidos cercanos
+                   
                     def order_weight(order_data):
                         px, py = order_data['pickup']
                         dist = abs(px - current_pos[0]) + abs(py - current_pos[1])
-                        return 1 / (dist + 1)  # Evita división por cero
+                        return 1 / (dist + 1) 
 
                     chosen_data = random.choices(
                         available_orders,
@@ -90,19 +103,16 @@ class EasyStrategy(Strategy):
 
                     self.target_order_id = chosen_data['id']
 
-                # Reinicia el temporizador de reevaluación
                 self.re_evaluation_timer = random.uniform(5.0, 15.0)
 
-        # 2. Intentar recoger un pedido si está en el punto de recogida
         if self.rival.inventory.order_count == 0 and self.target_order_id:
             available_orders = self.game.order_manager.get_available()
             for order_data in available_orders:
                 if order_data['id'] == self.target_order_id and order_data['pickup'] == current_pos:
                     if self.game.accept_order_at_location_rival(self.rival, order_data):
-                        self.target_order_id = None  # Limpia el objetivo, ahora debe entregar
+                        self.target_order_id = None  
                         return True
 
-        # 3. Intentar entregar si lleva un pedido activo
         if self.rival.inventory.current_order:
             dropoff = self.rival.inventory.current_order.order.dropoff
             if dropoff == current_pos:
